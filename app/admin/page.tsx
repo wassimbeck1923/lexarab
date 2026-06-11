@@ -1,5 +1,5 @@
- 'use client'
-import { useState, useEffect } from 'react'
+'use client'
+import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -8,115 +8,86 @@ const supabase = createClient(
 )
 
 export default function AdminPage() {
-  const [password, setPassword] = useState('')
-  const [loggedIn, setLoggedIn] = useState(false)
   const [countries, setCountries] = useState<any[]>([])
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [countryId, setCountryId] = useState('')
+  const [laws, setLaws] = useState<any[]>([])
+  const [selectedCountry, setSelectedCountry] = useState('')
+  const [form, setForm] = useState({
+    title: '',
+    category: '',
+    law_number: '',
+    preview_content: '',
+    content: ''
+  })
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    if (loggedIn) {
-      supabase.from('countries').select('*').order('name').then(({ data }) => {
-        if (data) setCountries(data)
-      })
-    }
-  }, [loggedIn])
+    supabase.from('countries').select('*').order('name_ar')
+      .then(({ data }) => { if (data) setCountries(data) })
+  }, [])
 
-  function handleLogin() {
-    if (password === 'lexarab2024') {
-      setLoggedIn(true)
-    } else {
-      setMessage('كلمة المرور خاطئة!')
-    }
-  }
+  useEffect(() => {
+    if (!selectedCountry) return
+    supabase.from('laws').select('*').eq('country_code', selectedCountry)
+      .then(({ data }) => { if (data) setLaws(data) })
+  }, [selectedCountry])
 
-  async function addLaw() {
-    if (!title || !content || !countryId) {
-      setMessage('يرجى ملء جميع الحقول')
-      return
-    }
+  const addLaw = async () => {
+    if (!selectedCountry || !form.title) return
     const { error } = await supabase.from('laws').insert({
-      title, content, country_id: countryId
+      country_code: selectedCountry, ...form
     })
-    if (error) {
-      setMessage('حدث خطأ: ' + error.message)
-    } else {
-      setMessage('✅ تم إضافة القانون بنجاح!')
-      setTitle('')
-      setContent('')
-      setCountryId('')
+    if (error) setMessage('خطأ: ' + error.message)
+    else {
+      setMessage('تم إضافة القانون بنجاح')
+      setForm({ title: '', category: '', law_number: '', preview_content: '', content: '' })
+      supabase.from('laws').select('*').eq('country_code', selectedCountry)
+        .then(({ data }) => { if (data) setLaws(data) })
     }
   }
 
-  if (!loggedIn) {
-    return (
-      <main className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-        <div className="bg-gray-900 p-8 rounded-2xl w-96">
-          <h1 className="text-2xl font-bold mb-6 text-center">لوحة التحكم</h1>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-gray-800 p-3 rounded-lg text-white mb-4"
-            placeholder="كلمة المرور"
-          />
-          <button
-            onClick={handleLogin}
-            className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-bold"
-          >
-            دخول
-          </button>
-          {message && <p className="text-center text-red-400 mt-4">{message}</p>}
-        </div>
-      </main>
-    )
+  const deleteLaw = async (id: string) => {
+    await supabase.from('laws').delete().eq('id', id)
+    setLaws(laws.filter(l => l.id !== id))
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white p-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">لوحة التحكم — إضافة قانون</h1>
-        <div className="bg-gray-900 p-6 rounded-2xl space-y-4">
-          <div>
-            <label className="block mb-2">الدولة</label>
-            <select
-              value={countryId}
-              onChange={(e) => setCountryId(e.target.value)}
-              className="w-full bg-gray-800 p-3 rounded-lg text-white"
-            >
-              <option value="">اختر الدولة</option>
-              {countries.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block mb-2">عنوان القانون</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-gray-800 p-3 rounded-lg text-white"
-              placeholder="مثال: نظام العمل"
-            />
-          </div>
-          <div>
-            <label className="block mb-2">نص القانون</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-gray-800 p-3 rounded-lg text-white h-40"
-              placeholder="اكتب نص القانون هنا..."
-            />
-          </div>
-          <button
-            onClick={addLaw}
-            className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-bold"
-          >
-            إضافة القانون
-          </button>
-          {message && <p className="text-center text-green-400">{message}</p>}
+    <main style={{minHeight:'100vh',background:'#0a0a0a',color:'white',padding:'2rem'}}>
+      <a href="/" style={{color:'#888',textDecoration:'none'}}>الموقع الرئيسي</a>
+      <h1 style={{textAlign:'center',fontSize:'2rem',margin:'1rem 0'}}>لوحة التحكم</h1>
+      <div style={{maxWidth:'800px',margin:'0 auto'}}>
+        <select value={selectedCountry} onChange={e => setSelectedCountry(e.target.value)}
+          style={{width:'100%',padding:'0.5rem',marginBottom:'1rem',background:'#222',color:'white',border:'1px solid #444',borderRadius:'0.5rem'}}>
+          <option value="">اختر الدولة</option>
+          {countries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name_ar}</option>)}
+        </select>
+        <input placeholder="عنوان القانون" value={form.title} onChange={e => setForm({...form, title: e.target.value})}
+          style={{width:'100%',padding:'0.5rem',marginBottom:'1rem',background:'#222',color:'white',border:'1px solid #444',borderRadius:'0.5rem'}} />
+        <input placeholder="التصنيف" value={form.category} onChange={e => setForm({...form, category: e.target.value})}
+          style={{width:'100%',padding:'0.5rem',marginBottom:'1rem',background:'#222',color:'white',border:'1px solid #444',borderRadius:'0.5rem'}} />
+        <input placeholder="رقم القانون" value={form.law_number} onChange={e => setForm({...form, law_number: e.target.value})}
+          style={{width:'100%',padding:'0.5rem',marginBottom:'1rem',background:'#222',color:'white',border:'1px solid #444',borderRadius:'0.5rem'}} />
+        <textarea placeholder="المعاينة" value={form.preview_content} onChange={e => setForm({...form, preview_content: e.target.value})}
+          rows={3} style={{width:'100%',padding:'0.5rem',marginBottom:'1rem',background:'#222',color:'white',border:'1px solid #444',borderRadius:'0.5rem'}} />
+        <textarea placeholder="النص الكامل" value={form.content} onChange={e => setForm({...form, content: e.target.value})}
+          rows={6} style={{width:'100%',padding:'0.5rem',marginBottom:'1rem',background:'#222',color:'white',border:'1px solid #444',borderRadius:'0.5rem'}} />
+        <button onClick={addLaw}
+          style={{background:'#2563eb',color:'white',padding:'0.75rem 2rem',border:'none',borderRadius:'0.5rem',cursor:'pointer'}}>
+          إضافة القانون
+        </button>
+        {message && <p style={{color:'#4ade80',marginTop:'1rem'}}>{message}</p>}
+        <div style={{marginTop:'2rem'}}>
+          {laws.map(law => (
+            <div key={law.id} style={{background:'#111',border:'1px solid #333',borderRadius:'0.5rem',padding:'1rem',marginBottom:'1rem',display:'flex',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontWeight:'bold'}}>{law.title}</div>
+                <div style={{color:'#888'}}>{law.category}</div>
+              </div>
+              <button onClick={() => deleteLaw(law.id)}
+                style={{background:'#dc2626',color:'white',padding:'0.5rem',border:'none',borderRadius:'0.5rem',cursor:'pointer'}}>
+                حذف
+              </button>
+            </div>
+          ))}
         </div>
       </div>
     </main>

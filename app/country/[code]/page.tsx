@@ -1,43 +1,44 @@
+'use client'
+import { useEffect, useState, use } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import Link from 'next/link'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export default async function CountryPage(props: any) {
-  const params = await props.params
-  const code = params.code.toUpperCase()
+export default function CountryPage({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = use(params)
+  const [laws, setLaws] = useState<any[]>([])
+  const [country, setCountry] = useState<any>(null)
 
-  const { data: country } = await supabase
-    .from('countries')
-    .select('*')
-    .eq('code', code)
-    .single()
-
-  const { data: laws } = await supabase
-    .from('laws')
-    .select('*')
-    .eq('country_id', country?.id)
+  useEffect(() => {
+    supabase.from('countries').select('*').eq('code', code).single()
+      .then(({ data }) => setCountry(data))
+    supabase.from('laws').select('*').eq('country_code', code)
+      .then(({ data }) => { if (data) setLaws(data) })
+  }, [code])
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white p-8">
-      <div className="max-w-4xl mx-auto">
-        <Link href="/" className="text-blue-400 mb-6 block">← Back</Link>
-        <h1 className="text-4xl font-bold mb-2">{country?.name}</h1>
-        <p className="text-gray-400 mb-8">Legal System & Laws</p>
-        <div className="space-y-4">
-          {laws?.map((law) => (
-            <div key={law.id} className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-              <h2 className="text-xl font-semibold mb-3">{law.title}</h2>
-              <p className="text-gray-400">{law.content?.substring(0, 200)}...</p>
-            </div>
-          ))}
-          {(!laws || laws.length === 0) && (
-            <p className="text-gray-500">No laws added yet.</p>
-          )}
-        </div>
+    <main style={{minHeight:'100vh',background:'#0a0a0a',color:'white',padding:'2rem'}}>
+      <a href="/" style={{color:'#888',textDecoration:'none'}}>← رجوع</a>
+      <h1 style={{textAlign:'center',fontSize:'2rem',margin:'1rem 0'}}>
+        {country?.flag} {country?.name_ar}
+      </h1>
+      <div style={{maxWidth:'800px',margin:'0 auto'}}>
+        {laws.length === 0 ? (
+          <p style={{textAlign:'center',color:'#888'}}>لا توجد قوانين بعد</p>
+        ) : (
+          laws.map((law) => (
+            <a href={`/country/${code}/${law.id}`} key={law.id} style={{textDecoration:'none',color:'white',display:'block',marginBottom:'1rem'}}>
+              <div style={{background:'#111',border:'1px solid #333',borderRadius:'1rem',padding:'1.5rem',cursor:'pointer'}}>
+                <div style={{fontWeight:'bold',fontSize:'1.1rem'}}>{law.title}</div>
+                <div style={{color:'#888',fontSize:'0.9rem',marginTop:'0.5rem'}}>{law.category} — {law.law_number}</div>
+                <div style={{marginTop:'1rem',color:'#ccc'}}>{law.preview_content}</div>
+              </div>
+            </a>
+          ))
+        )}
       </div>
     </main>
   )
