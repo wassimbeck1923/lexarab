@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -7,16 +7,20 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export default function CountryPage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = use(params)
+export default function CountryPage({ params }: { params: { code: string } }) {
+  const code = params.code
   const [laws, setLaws] = useState<any[]>([])
   const [country, setCountry] = useState<any>(null)
 
   useEffect(() => {
     supabase.from('countries').select('*').eq('code', code).single()
       .then(({ data }) => setCountry(data))
+
     supabase.from('laws').select('*').eq('country_code', code)
-      .then(({ data }) => { if (data) setLaws(data) })
+      .then(({ data, error }) => {
+        console.log('laws data:', data, 'error:', error)
+        if (data) setLaws(data)
+      })
   }, [code])
 
   return (
@@ -30,11 +34,10 @@ export default function CountryPage({ params }: { params: Promise<{ code: string
           <p style={{textAlign:'center',color:'#888'}}>لا توجد قوانين بعد</p>
         ) : (
           laws.map((law) => (
-            <a href={`/country/${code}/${law.id}`} key={law.id} style={{textDecoration:'none',color:'white',display:'block',marginBottom:'1rem'}}>
-              <div style={{background:'#111',border:'1px solid #333',borderRadius:'1rem',padding:'1.5rem',cursor:'pointer'}}>
+            <a href={`/country/${code}/${law.id}`} key={law.id} style={{textDecoration:'none'}}>
+              <div style={{background:'#111',border:'1px solid #333',borderRadius:'0.5rem',padding:'1rem',marginBottom:'1rem'}}>
                 <div style={{fontWeight:'bold',fontSize:'1.1rem'}}>{law.title}</div>
-                <div style={{color:'#888',fontSize:'0.9rem',marginTop:'0.5rem'}}>{law.category} — {law.law_number}</div>
-                <div style={{marginTop:'1rem',color:'#ccc'}}>{law.preview_content}</div>
+                <div style={{color:'#888',fontSize:'0.9rem',marginTop:'0.5rem'}}>{law.category}</div>
               </div>
             </a>
           ))
