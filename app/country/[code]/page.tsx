@@ -1,24 +1,28 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { useParams } from 'next/navigation'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export default function CountryPage({ params }: { params: { code: string } }) {
-  const code = params.code
+export default function CountryPage() {
+  const params = useParams()
+  const code = params.code as string
   const [laws, setLaws] = useState<any[]>([])
   const [country, setCountry] = useState<any>(null)
 
   useEffect(() => {
+    if (!code) return
+
     supabase.from('countries').select('*').eq('code', code).single()
       .then(({ data }) => setCountry(data))
 
     supabase.from('laws').select('*').eq('country_code', code)
       .then(({ data, error }) => {
-        console.log('laws data:', data, 'error:', error)
+        console.log('laws:', data, 'error:', error)
         if (data) setLaws(data)
       })
   }, [code])
