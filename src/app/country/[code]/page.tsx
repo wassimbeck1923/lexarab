@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+'https://hyjcufjyibqhlknssojl.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5amN1Zmp5aWJxaGxrbnNzb2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0MjAzNzUsImV4cCI6MjA2Mzk5NjM3NX0.lEQqh0ChyYZyZe6HHQ'
 )
 
 export default function CountryPage() {
@@ -16,15 +16,10 @@ export default function CountryPage() {
 
   useEffect(() => {
     if (!code) return
-
     supabase.from('countries').select('*').eq('code', code).single()
       .then(({ data }) => setCountry(data))
-
     supabase.from('laws').select('*').eq('country_code', code)
-      .then(({ data, error }) => {
-        console.log('laws:', data, 'error:', error)
-        if (data) setLaws(data)
-      })
+      .then(({ data }) => { if (data) setLaws(data) })
   }, [code])
 
   return (
