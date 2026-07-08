@@ -10,17 +10,24 @@ const supabase = createClient(
 export default function LawPage({ params }: { params: Promise<{ code: string, id: string }> }) {
   const { code, id } = use(params)
   const [law, setLaw] = useState<any>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     supabase.from('laws').select('*').eq('id', id).single()
       .then(({ data }) => setLaw(data))
+      supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('user_profiles').select('is_admin').eq('id', user.id).single()
+          .then(({ data }) => setIsAdmin(data?.is_admin === true))
+      }
+    })
   }, [id])
 
   if (!law) return <main style={{minHeight:'100vh',background:'#0a0a0a',color:'white',padding:'2rem',textAlign:'center'}}><a href={`/country/${code}`} style={{color:'#888',textDecoration:'none'}}>← رجوع</a><p style={{marginTop:'2rem'}}>جاري التحميل...</p></main>
 
   const fullText = law.content || law.preview_content || ''
   const words = fullText.split(' ')
-  const preview = words.slice(0, Math.ceil(words.length * 0.2)).join(' ')
+  const preview = isAdmin ? fullText : words.slice(0, Math.ceil(words.length * 0.2)).join(' ')
 
   return (
     <main style={{minHeight:'100vh',background:'#0a0a0a',color:'white',padding:'2rem'}}>
@@ -31,7 +38,7 @@ export default function LawPage({ params }: { params: Promise<{ code: string, id
         <div style={{background:'#111',border:'1px solid #333',borderRadius:'1rem',padding:'2rem',lineHeight:'2',color:'#ccc',marginBottom:'2rem'}}>
           {preview}...
         </div>
-        <div style={{background:'#111',border:'2px solid #2563eb',borderRadius:'1rem',padding:'2rem',textAlign:'center'}}>
+        {!isAdmin && (<div style={{background:'#111',border:'2px solid #2563eb',borderRadius:'1rem',padding:'2rem',textAlign:'center'}}>
           <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
           <h2 style={{marginBottom:'0.5rem'}}>اشترك لقراءة القانون كاملاً</h2>
           <p style={{color:'#888',marginBottom:'1.5rem'}}>وصول كامل لجميع قوانين 15 دولة</p>
@@ -52,7 +59,7 @@ export default function LawPage({ params }: { params: Promise<{ code: string, id
           <button style={{background:'#2563eb',color:'white',padding:'0.75rem 3rem',border:'none',borderRadius:'0.5rem',cursor:'pointer',fontSize:'1.1rem'}}>
             اشترك الآن
           </button>
-        </div>
+        </div>)}
       </div>
     </main>
   )
